@@ -8,9 +8,10 @@ namespace duckdb {
 
 // Remove this when we switch C++17: https://stackoverflow.com/a/53350948
 constexpr uint8_t BufferedFileWriter::DEFAULT_OPEN_FLAGS;
+constexpr idx_t BufferedFileWriter::DEFAULT_BUFFER_SIZE;
 
-BufferedFileWriter::BufferedFileWriter(FileSystem &fs, const string &path_p, uint8_t open_flags)
-    : fs(fs), path(path_p), data(make_unsafe_uniq_array<data_t>(FILE_BUFFER_SIZE)), offset(0), total_written(0) {
+BufferedFileWriter::BufferedFileWriter(FileSystem &fs, const string &path_p, uint8_t open_flags, idx_t buffer_size_p)
+    : fs(fs), path(path_p), buffer_size(buffer_size_p), data(make_unsafe_uniq_array<data_t>(buffer_size_p)), offset(0), total_written(0) {
 	handle = fs.OpenFile(path, open_flags, FileLockType::WRITE_LOCK);
 }
 
@@ -23,7 +24,7 @@ idx_t BufferedFileWriter::GetTotalWritten() {
 }
 
 void BufferedFileWriter::WriteData(const_data_ptr_t buffer, idx_t write_size) {
-	if (write_size >= (2 * FILE_BUFFER_SIZE - offset)) {
+	if (write_size >= (2L * FILE_BUFFER_SIZE - offset)) {
 		idx_t to_copy = 0;
 		// Check before performing direct IO if there is some data in the current internal buffer.
 		// If so, then fill the buffer (to avoid to small write operation), flush it and then write
